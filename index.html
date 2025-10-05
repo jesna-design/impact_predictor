@@ -90,7 +90,7 @@
                 resultsDiv.innerHTML = '<h2>Calculation Results</h2>';
 
                 if (data.error) {
-                    resultsDiv.innerHTML += <p class="failure">Error: ${data.error}</p>;
+                    resultsDiv.innerHTML += `<p class="failure">Error: ${data.error}</p>`;
                     return;
                 }
 
@@ -111,7 +111,7 @@
                 resultsDiv.innerHTML += html;
             })
             .catch(error => {
-                resultsDiv.innerHTML = <h2>Calculation Results</h2><p class="failure">A network or server error occurred: ${error}</p>;
+                resultsDiv.innerHTML = `<h2>Calculation Results</h2><p class="failure">A network or server error occurred: ${error}</p>`;
             });
         });
     </script>
