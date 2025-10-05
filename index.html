@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Asteroid Impact Energy Model</title>
+    <style>
+        body { font-family: sans-serif; max-width: 900px; margin: 40px auto; line-height: 1.6; background-color: #f4f4f9; }
+        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        .container { display: flex; gap: 30px; }
+        .input-form { flex: 1; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
+        .nearest-list { flex: 0 0 300px; padding: 20px; border-radius: 8px; background-color: #eaf2f8; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); }
+        .nearest-list h2 { color: #3498db; margin-top: 0; border-bottom: 1px dashed #3498db; padding-bottom: 5px; }
+        .nearest-list ul { list-style-type: none; padding: 0; }
+        .nearest-list li { margin-bottom: 8px; padding: 5px; border-bottom: 1px dotted #ccc; display: flex; justify-content: space-between; font-size: 0.95em;}
+        .nearest-list li span { font-weight: bold; color: #2c3e50; }
+        
+        label { display: block; margin-top: 15px; font-weight: bold; color: #34495e; }
+        input[type="text"], select { width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        button { background-color: #e74c3c; color: white; padding: 12px 20px; border: none; border-radius: 4px; cursor: pointer; margin-top: 20px; width: 100%; font-size: 16px; }
+        button:hover { background-color: #c0392b; }
+        
+        #results { margin-top: 30px; padding: 20px; border: 1px solid #bdc3c7; border-radius: 8px; background-color: #ecf0f1; }
+        .result-item { margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px dotted #ccc; }
+        .result-item strong { color: #e74c3c; }
+        .success { color: #27ae60; font-weight: bold; }
+        .failure { color: #c0392b; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>☄ Asteroid Impact Energy Predictor</h1>
+    <p>Use the form to calculate the estimated kinetic energy for an asteroid given its name and assumed composition (density).</p>
+
+    <div class="container">
+        
+        <div class="nearest-list">
+            <h2>Top 5 Nearest Asteroids</h2>
+            <p style="font-size: 0.8em; color: #7f8c8d;">(Data is mock/example-based. Use *99942 Apophis* to test the calculation.)</p>
+            <ul>
+                {% for name, distance in top_asteroids %}
+                    <li>
+                        <span>{{ name }}</span>
+                        <span>{{ "{:,.0f}".format(distance) }} km</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+        
+        <div class="input-form">
+            <form id="impact-form">
+                <label for="asteroid_name">Asteroid Name or NEO ID</label>
+                <input type="text" id="asteroid_name" name="asteroid_name" placeholder="E.g., 99942 Apophis" required>
+
+                <label for="density_value">Assumed Asteroid Type (Density)</label>
+                <select id="density_value" name="density_value">
+                    {% for type, density in densities.items() %}
+                        <option value="{{ density }}" {% if type == 'Rocky' %}selected{% endif %}>
+                            {{ type }} ({{ "{:,.0f}".format(density) }} kg/m³)
+                        </option>
+                    {% endfor %}
+                </select>
+
+                <button type="submit">Calculate Impact Energy</button>
+            </form>
+        </div>
+        
+    </div>
+
+    <div id="results">
+        <h2>Calculation Results</h2>
+        <p id="initial-message">Enter details and click 'Calculate Impact Energy' to see results here.</p>
+    </div>
+
+    <script>
+        document.getElementById('impact-form').addEventListener('submit', function(event) {
+            event.preventDefault(); 
+
+            const form = event.target;
+            const formData = new FormData(form);
+            const resultsDiv = document.getElementById('results');
+
+            resultsDiv.innerHTML = '<h2>Calculation Results</h2><p>Calculating...</p>';
+
+            // Send data to the Flask backend
+            fetch('/calculate_impact', {
+                method: 'POST',
+                body: formData,
+            })
+            .then(response => response.json())
+            .then(data => {
+                resultsDiv.innerHTML = '<h2>Calculation Results</h2>';
+
+                if (data.error) {
+                    resultsDiv.innerHTML += <p class="failure">Error: ${data.error}</p>;
+                    return;
+                }
+
+                // Render the results
+                let html = `
+                    <p class="success">Analysis for Asteroid: <strong>${data.name}</strong></p>
+                    <div class="result-item">Potentially Hazardous: ${data.is_potentially_hazardous ? '<span style="color: red; font-weight: bold;">YES</span>' : 'No'}</div>
+                    <div class="result-item">Assumed Density: ${data.assumed_density_kg_m3}</div>
+                    <div class="result-item">Avg Diameter (Estimate): ${data.average_diameter_m}</div>
+                    <div class="result-item">Relative Velocity: ${data.relative_velocity_km_s}</div>
+                    <div class="result-item">Calculated Mass: ${data.calculated_mass_kg}</div>
+                    <h3>IMPACT ENERGY PREDICTION</h3>
+                    <div class="result-item">Kinetic Energy: <strong>${data.kinetic_energy_joules} Joules</strong></div>
+                    <div class="result-item">Equivalent Energy: <strong>${data.impact_energy_megatons_tnt}</strong></div>
+                    <h4>Interpretation:</h4>
+                    <p>${data.interpretation}</p>
+                `;
+                resultsDiv.innerHTML += html;
+            })
+            .catch(error => {
+                resultsDiv.innerHTML = <h2>Calculation Results</h2><p class="failure">A network or server error occurred: ${error}</p>;
+            });
+        });
+    </script>
+</body>
+</html>
